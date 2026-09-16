@@ -1,0 +1,437 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Screening History — NETRA</title>
+  <meta name="description" content="View past diabetic retinopathy screenings, search by patient name or date, and access full results." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Search / filter bar ─────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-bar .form-input {
+      max-width: 280px;
+    }
+
+    .filter-bar select.form-input {
+      max-width: 200px;
+      cursor: pointer;
+    }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    .history-table-wrap {
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    .history-table thead {
+      background: var(--neutral-50);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .history-table th {
+      padding: 12px 20px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .history-table th:hover { color: var(--text-secondary); }
+
+    .history-table th.sorted { color: var(--teal-600); }
+
+    .sort-icon {
+      display: inline-block;
+      margin-left: 4px;
+      opacity: 0.5;
+      font-size: 0.65rem;
+    }
+
+    .history-table tbody tr {
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .history-table tbody tr:last-child { border-bottom: none; }
+
+    .history-table tbody tr:hover { background: var(--teal-50); }
+
+    .history-table td {
+      padding: 14px 20px;
+      vertical-align: middle;
+    }
+
+    .patient-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .patient-initials {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--teal-100);
+      color: var(--teal-700);
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .patient-name {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .patient-age {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .row-action {
+      color: var(--teal-600);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .row-action:hover { color: var(--teal-700); }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: var(--neutral-300);
+    }
+
+    .empty-state p { font-size: 0.9rem; }
+
+    /* Results count */
+    .results-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-light);
+      background: var(--neutral-50);
+    }
+
+    .page-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-mid);
+      background: var(--white);
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      transition: all var(--transition);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .page-btn:hover { background: var(--teal-50); border-color: var(--teal-400); color: var(--teal-600); }
+    .page-btn.active { background: var(--teal-600); border-color: var(--teal-600); color: var(--white); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    @media (max-width: 640px) {
+      .history-table thead th:nth-child(3),
+      .history-table tbody td:nth-child(3) { display: none; }
+      .history-table thead th:nth-child(4),
+      .history-table tbody td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<div class="app-shell">
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,.06)"/>
+        <path d="M5 18C5 18 10 9 18 9C26 9 31 18 31 18C31 18 26 27 18 27C10 27 5 18 5 18Z" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+        <circle cx="18" cy="18" r="5" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none"/>
+        <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,.85)"/>
+        <circle cx="19.8" cy="16.2" r="0.9" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      <div class="logo-text">
+        <span class="wordmark">NETRA</span>
+        <span class="tagline">Explainable Retinal AI</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-label">Screening</span>
+      <a href="screening.html" class="nav-item" data-page="screening">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="4"/></svg>
+        New Screening
+      </a>
+      <a href="history.html" class="nav-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        Screening History
+      </a>      <a href="referrals.html" class="nav-item" data-page="referrals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Referral Queue
+        <span class="rq-nav-dot" style="display:none;"></span>
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Records</span>
+      <a href="reports.html" class="nav-item" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Reports
+      </a>
+      <span class="nav-label" style="margin-top:8px;">Account</span>
+      <a href="profile.html" class="nav-item" data-page="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">DR</div>
+      <div class="user-meta">
+        <div class="user-name" id="sidebar-user-name">—</div>
+        <div class="user-role" id="sidebar-user-role">—</div>
+      </div>
+      <button id="logout-btn" title="Sign out" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);padding:4px;" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-header-left">
+          <h1>Screening History</h1>
+          <p>Browse and search past patient screenings</p>
+        </div>
+      </div>
+      <a href="screening.html" class="btn btn-primary btn-sm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New screening
+      </a>
+    </header>
+
+    <div class="page-body">
+
+      <div class="filter-bar">
+        <input type="search" id="search-input" class="form-input" placeholder="Search by patient name…" aria-label="Search patients" />
+        <select id="grade-filter" class="form-input" aria-label="Filter by grade">
+          <option value="">All grades</option>
+          <option value="none">No DR</option>
+          <option value="mild">Mild DR</option>
+          <option value="moderate">Moderate DR</option>
+          <option value="severe">Severe DR</option>
+          <option value="proliferative">Proliferative DR</option>
+        </select>
+      </div>
+
+      <div id="results-meta" class="results-meta"></div>
+
+      <div class="history-table-wrap">
+        <table class="history-table" id="history-table" aria-label="Screening history">
+          <thead>
+            <tr>
+              <th data-col="patientName" id="th-patient">Patient <span class="sort-icon">↕</span></th>
+              <th data-col="date" id="th-date" class="sorted">Date <span class="sort-icon">↓</span></th>
+              <th data-col="grade" id="th-grade">Result <span class="sort-icon">↕</span></th>
+              <th data-col="confidence" id="th-conf">Confidence <span class="sort-icon">↕</span></th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+
+        <div id="empty-state" class="empty-state" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <p>No screenings match your search.</p>
+        </div>
+
+        <div id="pagination" class="pagination"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="netra-config.js"></script>
+<script src="netra.js"></script>
+<script>
+  NETRA.initSidebar('history');
+
+  let allData    = NETRA.getScreenings();
+  let filtered   = [...allData];
+  let sortCol    = 'date';
+  let sortAsc    = false;
+  let currentPage = 1;
+  const PER_PAGE  = 10;
+
+  // ── Filter ─────────────────────────────────────────────────────
+  function applyFilter() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    const g = document.getElementById('grade-filter').value;
+    filtered = allData.filter(r => {
+      const nameMatch  = !q || r.patientName.toLowerCase().includes(q);
+      const gradeMatch = !g || r.grade === g;
+      return nameMatch && gradeMatch;
+    });
+    currentPage = 1;
+    applySort();
+  }
+
+  document.getElementById('search-input').addEventListener('input', applyFilter);
+  document.getElementById('grade-filter').addEventListener('change', applyFilter);
+
+  // ── Sort ───────────────────────────────────────────────────────
+  function applySort() {
+    filtered.sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+    render();
+  }
+
+  document.querySelectorAll('.history-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) { sortAsc = !sortAsc; }
+      else { sortCol = col; sortAsc = true; }
+      document.querySelectorAll('.history-table th').forEach(h => {
+        h.classList.remove('sorted');
+        const ic = h.querySelector('.sort-icon');
+        if (ic) ic.textContent = '↕';
+      });
+      th.classList.add('sorted');
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = sortAsc ? '↑' : '↓';
+      applySort();
+    });
+  });
+
+  // ── Render ─────────────────────────────────────────────────────
+  function render() {
+    const tbody    = document.getElementById('table-body');
+    const emptyEl  = document.getElementById('empty-state');
+    const metaEl   = document.getElementById('results-meta');
+    const pageEl   = document.getElementById('pagination');
+
+    const total = filtered.length;
+    const pages = Math.ceil(total / PER_PAGE);
+    const start = (currentPage - 1) * PER_PAGE;
+    const slice = filtered.slice(start, start + PER_PAGE);
+
+    metaEl.textContent = total === 0 ? '' :
+      `Showing ${start + 1}–${Math.min(start + PER_PAGE, total)} of ${total} screening${total !== 1 ? 's' : ''}`;
+
+    if (total === 0) {
+      tbody.innerHTML = '';
+      emptyEl.style.display = 'block';
+      pageEl.innerHTML = '';
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    tbody.innerHTML = slice.map(r => {
+      const initials = r.patientName.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      const info = NETRA.gradeInfo(r.grade);
+      return `
+        <tr data-id="${r.id}" tabindex="0" role="button" aria-label="View screening for ${r.patientName}">
+          <td>
+            <div class="patient-cell">
+              <div class="patient-initials">${initials}</div>
+              <div>
+                <div class="patient-name">${r.patientName}</div>
+                ${r.age ? `<div class="patient-age">${r.age} yrs</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--text-secondary)">${NETRA.formatDate(r.date)}</td>
+          <td><span class="grade-badge ${info.css}">${info.label}</span></td>
+          <td style="color:var(--text-secondary);font-weight:500;">${r.confidence}%</td>
+          <td><a href="reports.html?id=${r.id}" class="row-action">View report →</a></td>
+        </tr>`;
+    }).join('');
+
+    // Row click
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.addEventListener('click', () => {
+        window.location.href = 'reports.html?id=' + tr.dataset.id;
+      });
+      tr.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') window.location.href = 'reports.html?id=' + tr.dataset.id;
+      });
+    });
+
+    // Pagination
+    if (pages <= 1) { pageEl.innerHTML = ''; return; }
+    let pHtml = `<button class="page-btn" id="prev-btn" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>`;
+    for (let i = 1; i <= pages; i++) {
+      pHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}" aria-label="Page ${i}" aria-current="${i === currentPage ? 'page' : 'false'}">${i}</button>`;
+    }
+    pHtml += `<button class="page-btn" id="next-btn" ${currentPage === pages ? 'disabled' : ''} aria-label="Next page">›</button>`;
+    pageEl.innerHTML = pHtml;
+
+    pageEl.querySelector('#prev-btn')?.addEventListener('click', () => { currentPage--; render(); });
+    pageEl.querySelector('#next-btn')?.addEventListener('click', () => { currentPage++; render(); });
+    pageEl.querySelectorAll('[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => { currentPage = parseInt(btn.dataset.page); render(); });
+    });
+  }
+
+  // Initial render
+  applyFilter();
+</script>
+
+</body>
+</html>

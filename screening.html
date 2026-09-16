@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Screening — NETRA</title>
+  <meta name="description" content="Upload a retinal image and get an instant, explainable AI grading for diabetic retinopathy." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Upload zone ─────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border-mid);
+      border-radius: var(--radius-lg);
+      background: var(--neutral-50);
+      padding: 52px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+      position: relative;
+    }
+
+    .upload-zone.drag-over {
+      border-color: var(--teal-500);
+      background: var(--teal-50);
+    }
+
+    .upload-zone.has-image {
+      border-color: var(--teal-400);
+      background: var(--teal-50);
+      padding: 24px;
+    }
+
+    .upload-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 16px;
+      color: var(--neutral-400);
+    }
+
+    .upload-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .upload-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .upload-browse {
+      color: var(--teal-600);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .upload-file-input { display: none; }
+
+    .preview-img {
+      display: none;
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+    }
+
+    .preview-label {
+      display: none;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    /* ── Analysis spinner ────────────────────────────────────── */
+    .analyzing-state {
+      display: none;
+      text-align: center;
+      padding: 32px 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--teal-200);
+      border-top-color: var(--teal-600);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .analyzing-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Result section ──────────────────────────────────────── */
+    .result-section {
+      display: none;
+      margin-top: 32px;
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-grade-card {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+
+    .grade-icon-wrap {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .grade-icon-wrap svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .grade-details { flex: 1; }
+
+    .grade-label-small {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .grade-name {
+      font-family: 'Lora', serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .grade-confidence {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .grade-confidence span {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .confidence-bar-wrap {
+      margin-top: 8px;
+      height: 6px;
+      background: var(--neutral-200);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+
+    .confidence-bar {
+      height: 100%;
+      border-radius: var(--radius-full);
+      background: var(--teal-500);
+      transition: width 0.8s ease;
+    }
+
+    .recommendation-box {
+      background: var(--neutral-50);
+      border-left: 4px solid var(--teal-400);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ── Image comparison ────────────────────────────────────── */
+    .image-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .image-card {
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .image-card-label {
+      padding: 12px 16px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-light);
+      background: var(--neutral-50);
+    }
+
+    .image-card img {
+      width: 100%;
+      display: block;
+      max-height: 260px;
+      object-fit: cover;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    /* ── Patient fields ──────────────────────────────────────── */
+    .patient-section {
+      margin-bottom: 24px;
+    }
+
+    .section-heading {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    @media (max-width: 620px) {
+      .image-pair { grid-template-columns: 1fr; }
+      .result-grade-card { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,.06)"/>
+        <path d="M5 18C5 18 10 9 18 9C26 9 31 18 31 18C31 18 26 27 18 27C10 27 5 18 5 18Z"
+              stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+        <circle cx="18" cy="18" r="5" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none"/>
+        <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,.85)"/>
+        <circle cx="19.8" cy="16.2" r="0.9" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      <div class="logo-text">
+        <span class="wordmark">NETRA</span>
+        <span class="tagline">Explainable Retinal AI</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label">Screening</span>
+      <a href="screening.html" class="nav-item" data-page="screening">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="4"/></svg>
+        New Screening
+      </a>
+      <a href="history.html" class="nav-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        Screening History
+      </a>      <a href="referrals.html" class="nav-item" data-page="referrals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Referral Queue
+        <span class="rq-nav-dot" id="rq-nav-indicator" style="display:none;"></span>
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Records</span>
+      <a href="reports.html" class="nav-item" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Reports
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Account</span>
+      <a href="profile.html" class="nav-item" data-page="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">DR</div>
+      <div class="user-meta">
+        <div class="user-name" id="sidebar-user-name">—</div>
+        <div class="user-role" id="sidebar-user-role">—</div>
+      </div>
+      <button id="logout-btn" title="Sign out" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);padding:4px;" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="page-header">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-header-left">
+          <h1>New Screening</h1>
+          <p>Upload a retinal image to get an AI grading</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- Patient details -->
+      <div class="card patient-section">
+        <div class="section-heading">Patient Details <span style="font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">(optional)</span></div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="patient-name">Patient Name</label>
+            <input type="text" id="patient-name" class="form-input" placeholder="Full name" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="patient-age">Age</label>
+            <input type="number" id="patient-age" class="form-input" placeholder="e.g. 54" min="1" max="120" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="card">
+        <div class="section-heading">Fundus Image</div>
+
+        <div id="upload-zone" class="upload-zone" role="button" tabindex="0" aria-label="Upload fundus image">
+          <div id="upload-placeholder">
+            <svg class="upload-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="26" cy="22" r="14" stroke="currentColor" stroke-width="2" fill="none"/>
+              <circle cx="26" cy="22" r="6" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M26 38V50M18 46l8 4 8-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="upload-title">Drag &amp; drop a fundus image here</div>
+            <div class="upload-sub">or <span class="upload-browse" id="upload-browse-btn">click to browse</span> &nbsp;·&nbsp; JPEG, PNG — max 10 MB</div>
+          </div>
+
+          <img id="preview-img" class="preview-img" alt="Uploaded fundus image preview" />
+          <div id="preview-label" class="preview-label"></div>
+
+          <input type="file" id="file-input" class="upload-file-input" accept="image/jpeg,image/png,image/jpg" aria-label="File input for fundus image" />
+        </div>
+
+        <!-- Analyze button -->
+        <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+          <button id="analyze-btn" class="btn btn-primary btn-lg" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="4"/></svg>
+            Analyze image
+          </button>
+          <button id="clear-btn" class="btn btn-secondary" style="display:none;">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Analyzing state -->
+      <div id="analyzing-state" class="analyzing-state card mt-4">
+        <div class="spinner"></div>
+        <div class="analyzing-text">Analyzing retinal image…</div>
+        <p class="text-sm text-muted mt-4" style="max-width:320px;margin-left:auto;margin-right:auto;">Generating Grad-CAM saliency map and grading severity. This takes a moment.</p>
+      </div>
+      <!-- ══ REFERRAL QUEUE ══════════════════════════════════════════ -->
+      <section id="referral-queue-section" class="rq-card mt-8" aria-label="Referral Queue">
+
+        <!-- Card Header -->
+        <div class="rq-card-top">
+          <div class="rq-card-top-left">
+            <div class="rq-card-title">
+              <span class="rq-pulse-dot" id="rq-pulse" style="display:none;"></span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Referral Queue
+            </div>
+            <div class="rq-card-subtitle">Cases requiring follow-up or human review</div>
+          </div>
+          <div class="rq-card-top-right">
+            <button id="rq-refresh-btn" class="rq-refresh-btn" title="Refresh referral queue" aria-label="Refresh referral queue">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+            <a href="referrals.html" class="rq-view-all" id="rq-view-all-link">
+              View All
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Summary Counters -->
+        <div class="rq-counters" id="rq-counters" style="display:none;">
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-total">—</div>
+            <div class="rq-counter-label">Total Cases</div>
+          </div>
+          <div class="rq-counter high">
+            <div class="rq-counter-value" id="rq-count-high">—</div>
+            <div class="rq-counter-label">High Priority</div>
+          </div>
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-followup">—</div>
+            <div class="rq-counter-label">Follow-Up</div>
+          </div>
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-review">—</div>
+            <div class="rq-counter-label">Human Review</div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="rq-loading" class="rq-state">
+          <div class="rq-spinner"></div>
+          <div class="rq-state-title">Loading referral queue…</div>
+          <div class="rq-state-sub">Fetching cases from the screening workflow</div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="rq-empty" class="rq-state" style="display:none;">
+          <svg class="rq-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div class="rq-state-title">No cases currently require referral or review.</div>
+          <div class="rq-state-sub">All screened cases are up to date.</div>
+        </div>
+
+        <!-- Error State -->
+        <div id="rq-error" class="rq-state" style="display:none;">
+          <svg class="rq-state-icon rq-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div class="rq-state-title">Referral queue unavailable. Please try again.</div>
+          <div class="rq-state-sub" id="rq-error-detail"></div>
+        </div>
+
+        <!-- Table -->
+        <div id="rq-table-wrap" class="rq-table-wrap" style="display:none;">
+          <table class="rq-table" role="grid" aria-label="Referral queue cases">
+            <thead>
+              <tr>
+                <th scope="col">Screening ID</th>
+                <th scope="col">Severity</th>
+                <th scope="col">Confidence</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Action</th>
+                <th scope="col">Status</th>
+                <th scope="col" aria-label="View details"></th>
+              </tr>
+            </thead>
+            <tbody id="rq-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+      <!-- ══ END REFERRAL QUEUE ══════════════════════════════════════ -->
+
+
+      <!-- Results -->
+      <div id="result-section" class="result-section">
+
+        <!-- Grade card -->
+        <div class="card" style="margin-bottom:20px;">
+          <div class="section-heading">AI Assessment</div>
+          <div class="result-grade-card" id="result-grade-card" style="border:none;box-shadow:none;padding:0;">
+            <div class="grade-icon-wrap" id="grade-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div class="grade-details">
+              <div class="grade-label-small">DR Severity Grade</div>
+              <div class="grade-name" id="result-grade-name">—</div>
+              <div class="grade-confidence">Model confidence: <span id="result-confidence">—</span></div>
+              <div class="confidence-bar-wrap mt-4">
+                <div class="confidence-bar" id="confidence-bar" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="recommendation-box mt-4" id="result-recommendation">—</div>
+        </div>
+
+        <!-- Image pair -->
+        <div class="card">
+          <div class="section-heading">Visual Explanation (Grad-CAM)</div>
+          <p class="text-sm text-muted mb-4">The heatmap highlights the image regions that most influenced the model's grading. Warmer colours indicate higher attention.</p>
+          <div class="image-pair">
+            <div class="image-card">
+              <div class="image-card-label">Original fundus image</div>
+              <img id="result-original-img" src="" alt="Original fundus image" />
+            </div>
+            <div class="image-card">
+              <div class="image-card-label">Grad-CAM heatmap overlay</div>
+              <img id="result-heatmap-img" src="" alt="Grad-CAM heatmap overlay" />
+            </div>
+          </div>
+        </div>
+
+        <div class="result-actions">
+          <button id="save-btn" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save to history
+          </button>
+          <a href="reports.html" id="view-report-btn" class="btn btn-outline">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            View report
+          </a>
+          <button id="new-screening-btn" class="btn btn-secondary">New screening</button>
+        </div>
+
+        <div id="save-success" style="display:none;margin-top:12px;" class="recommendation-box" style="border-left-color:var(--grade-none);">
+          ✓ Screening saved to history.
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="netra-config.js"></script>
+<script src="netra.js"></script>
+<script>
+  NETRA.initSidebar('screening');
+
+  const zone        = document.getElementById('upload-zone');
+  const fileInput   = document.getElementById('file-input');
+  const browseBtn   = document.getElementById('upload-browse-btn');
+  const previewImg  = document.getElementById('preview-img');
+  const previewLbl  = document.getElementById('preview-label');
+  const placeholder = document.getElementById('upload-placeholder');
+  const analyzeBtn  = document.getElementById('analyze-btn');
+  const clearBtn    = document.getElementById('clear-btn');
+  const analyzingEl = document.getElementById('analyzing-state');
+  const resultEl    = document.getElementById('result-section');
+
+  let uploadedDataUrl = null;
+  let uploadedFile    = null;
+  let heatmapDataUrl  = null;
+  let currentResult   = null;
+
+  // ── Upload handlers ───────────────────────────────────────────
+  browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+  zone.addEventListener('click', () => fileInput.click());
+  zone.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file.type.match(/image\/(jpeg|png|jpg)/)) return alert('Please upload a JPEG or PNG image.');
+    if (file.size > 10 * 1024 * 1024) return alert('File is too large. Maximum size is 10 MB.');
+
+    uploadedFile = file; // store the raw File for the API
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      uploadedDataUrl = e.target.result;
+      placeholder.style.display = 'none';
+      previewImg.src = uploadedDataUrl;
+      previewImg.style.display = 'block';
+      previewLbl.textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
+      previewLbl.style.display = 'block';
+      zone.classList.add('has-image');
+      analyzeBtn.disabled = false;
+      clearBtn.style.display = 'inline-flex';
+      resultEl.style.display = 'none';
+      document.getElementById('save-success').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  clearBtn.addEventListener('click', () => {
+    uploadedDataUrl = null;
+    uploadedFile = null;
+    fileInput.value = '';
+    placeholder.style.display = 'block';
+    previewImg.style.display = 'none';
+    previewLbl.style.display = 'none';
+    zone.classList.remove('has-image');
+    analyzeBtn.disabled = true;
+    clearBtn.style.display = 'none';
+    resultEl.style.display = 'none';
+    analyzingEl.style.display = 'none';
+  });
+
+  // ── Analyze ───────────────────────────────────────────────────
+  analyzeBtn.addEventListener('click', () => {
+    if (!uploadedDataUrl || !uploadedFile) return;
+    analyzeBtn.disabled = true;
+    clearBtn.disabled = true;
+    analyzingEl.style.display = 'block';
+    resultEl.style.display = 'none';
+
+    // Hide any previous API error
+    const prevErr = document.getElementById('analyze-api-error');
+    if (prevErr) prevErr.remove();
+
+    NETRA.analyzeImage(uploadedFile, ({ grade, confidence, heatmapUrl, recommendation, screeningId }) => {
+      // If the API returned a real Grad-CAM URL, use it directly.
+      // Otherwise fall back to the canvas-generated heatmap.
+      if (heatmapUrl) {
+        heatmapDataUrl = heatmapUrl;
+        currentResult = { grade, confidence, screeningId };
+        showResult(grade, confidence, uploadedDataUrl, heatmapUrl, recommendation);
+        analyzingEl.style.display = 'none';
+        resultEl.style.display = 'block';
+        analyzeBtn.disabled = false;
+        clearBtn.disabled = false;
+      } else {
+        NETRA.generateHeatmap(uploadedDataUrl, (hmUrl) => {
+          heatmapDataUrl = hmUrl;
+          currentResult = { grade, confidence, screeningId };
+          showResult(grade, confidence, uploadedDataUrl, hmUrl, recommendation);
+          analyzingEl.style.display = 'none';
+          resultEl.style.display = 'block';
+          analyzeBtn.disabled = false;
+          clearBtn.disabled = false;
+        });
+      }
+    }).catch((err) => {
+      console.error('[NETRA] analyzeImage failed:', err);
+      analyzingEl.style.display = 'none';
+      analyzeBtn.disabled = false;
+      clearBtn.disabled = false;
+
+      // Show inline error
+      const errDiv = document.createElement('div');
+      errDiv.id = 'analyze-api-error';
+      errDiv.style.cssText = 'margin-top:16px;padding:14px 18px;background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:var(--radius-sm);font-size:0.87rem;color:#b91c1c;line-height:1.5;';
+      errDiv.innerHTML = `<strong>Analysis failed.</strong> ${err.message || 'Could not reach the screening API.'} <br><span style="color:#6b7280;font-size:0.8rem;">Check the console for details or try again.</span>`;
+      document.getElementById('analyze-btn').closest('.card').appendChild(errDiv);
+    });
+  });
+
+  // apiRecommendation: optional string from the API (overrides the default NETRA text)
+  function showResult(grade, confidence, origUrl, hmUrl, apiRecommendation) {
+    const info = NETRA.gradeInfo(grade);
+
+    // Grade colours map
+    const colorMap = {
+      none:          { bg: 'var(--grade-none-bg)',          color: 'var(--grade-none)' },
+      mild:          { bg: 'var(--grade-mild-bg)',          color: 'var(--grade-mild)' },
+      moderate:      { bg: 'var(--grade-moderate-bg)',      color: 'var(--grade-moderate)' },
+      severe:        { bg: 'var(--grade-severe-bg)',        color: 'var(--grade-severe)' },
+      proliferative: { bg: 'var(--grade-proliferative-bg)', color: 'var(--grade-proliferative)' },
+    };
+    const c = colorMap[grade];
+
+    document.getElementById('grade-icon-wrap').style.background = c.bg;
+    document.getElementById('grade-icon-wrap').style.color = c.color;
+    document.getElementById('result-grade-name').textContent = info.label;
+    document.getElementById('result-grade-name').style.color = c.color;
+    document.getElementById('result-confidence').textContent = confidence + '%';
+    // Use the API's clinical recommendation if provided, otherwise fall back to NETRA's default.
+    document.getElementById('result-recommendation').textContent =
+      apiRecommendation || NETRA.recommendation(grade);
+
+    setTimeout(() => {
+      document.getElementById('confidence-bar').style.width = confidence + '%';
+      const barColor = confidence > 90 ? 'var(--grade-none)' : confidence > 80 ? 'var(--teal-500)' : 'var(--grade-moderate)';
+      document.getElementById('confidence-bar').style.background = barColor;
+    }, 100);
+
+    document.getElementById('result-original-img').src = origUrl;
+    document.getElementById('result-heatmap-img').src = hmUrl;
+  }
+
+  // ── Save ──────────────────────────────────────────────────────
+  let savedId = null;
+  document.getElementById('save-btn').addEventListener('click', () => {
+    if (!currentResult) return;
+    const name = document.getElementById('patient-name').value.trim() || 'Unknown Patient';
+    const age  = parseInt(document.getElementById('patient-age').value) || null;
+    // Prefer the backend's screening_id; fall back to a local timestamp-based id.
+    const id = currentResult.screeningId || ('s' + Date.now());
+    savedId = id;
+    NETRA.addScreening({
+      id,
+      patientName: name,
+      age,
+      date: new Date().toISOString().split('T')[0],
+      grade: currentResult.grade,
+      confidence: currentResult.confidence,
+      imageUrl: uploadedDataUrl,
+      heatmapUrl: heatmapDataUrl,
+    });
+    document.getElementById('save-success').style.display = 'block';
+    document.getElementById('save-btn').disabled = true;
+    // Update report link
+    document.getElementById('view-report-btn').href = 'reports.html?id=' + id;
+  });
+
+  document.getElementById('new-screening-btn').addEventListener('click', () => {
+    clearBtn.click();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // REFERRAL QUEUE — Dashboard Widget
+  // ═══════════════════════════════════════════════════════════════
+  (function () {
+    const MAX_ROWS = 8; // compact preview on homepage
+
+    const elLoading    = document.getElementById('rq-loading');
+    const elEmpty      = document.getElementById('rq-empty');
+    const elError      = document.getElementById('rq-error');
+    const elErrorDetail= document.getElementById('rq-error-detail');
+    const elTableWrap  = document.getElementById('rq-table-wrap');
+    const elTableBody  = document.getElementById('rq-table-body');
+    const elCounters   = document.getElementById('rq-counters');
+    const elPulse      = document.getElementById('rq-pulse');
+    const elNavDot     = document.getElementById('rq-nav-indicator');
+    const refreshBtn   = document.getElementById('rq-refresh-btn');
+
+    // Modal elements
+    const modalOverlay = document.getElementById('rq-modal-overlay');
+    const modalClose   = document.getElementById('rq-modal-close-btn');
+    const modalCloseFooter = document.getElementById('rq-modal-close-footer-btn');
+    const heatmapBtn   = document.getElementById('rq-modal-heatmap-btn');
+
+    function setState(state) {
+      elLoading.style.display   = state === 'loading' ? 'block' : 'none';
+      elEmpty.style.display     = state === 'empty'   ? 'block' : 'none';
+      elError.style.display     = state === 'error'   ? 'block' : 'none';
+      elTableWrap.style.display = state === 'data'    ? 'block' : 'none';
+      elCounters.style.display  = state === 'data'    ? 'flex'  : 'none';
+    }
+
+    function updateCounters(items) {
+      const total    = items.length;
+      const high     = items.filter(i => (i.priority||'').toUpperCase() === 'HIGH' || (i.priority||'').toUpperCase() === 'URGENT').length;
+      const followup = items.filter(i => (i.status||'').toUpperCase().includes('FOLLOW')).length;
+      const review   = items.filter(i => (i.status||'').toUpperCase().includes('HUMAN') || (i.status||'').toUpperCase().includes('REVIEW') || (i.action||'').toUpperCase().includes('MANUAL')).length;
+
+      document.getElementById('rq-count-total').textContent   = total;
+      document.getElementById('rq-count-high').textContent    = high;
+      document.getElementById('rq-count-followup').textContent= followup;
+      document.getElementById('rq-count-review').textContent  = review;
+
+      if (total > 0) {
+        elPulse.style.display   = 'inline-block';
+        if (elNavDot) elNavDot.style.display = 'inline-block';
+      }
+    }
+
+    function renderRow(item) {
+      const priorityCls = NETRA.priorityClass(item.priority);
+      const actionLabel = NETRA.formatAction(item.action);
+      const statusLabel = NETRA.formatStatus(item.status);
+      const confDisplay = item.confidence != null
+        ? (Number(item.confidence) > 1 ? Number(item.confidence).toFixed(1) + '%' : (Number(item.confidence) * 100).toFixed(1) + '%')
+        : '—';
+
+      const tr = document.createElement('tr');
+      tr.setAttribute('tabindex', '0');
+      tr.setAttribute('role', 'row');
+      tr.setAttribute('aria-label', 'Case ' + item.screening_id);
+      tr.innerHTML = `
+        <td class="rq-screening-id">${escHtml(item.screening_id || '—')}</td>
+        <td class="rq-severity">${escHtml(item.severity || item.prediction || '—')}</td>
+        <td class="rq-confidence">${confDisplay}</td>
+        <td><span class="priority-badge priority-${priorityCls}">${escHtml((item.priority || '—').toUpperCase())}</span></td>
+        <td class="rq-action-text">${escHtml(actionLabel)}</td>
+        <td><span class="rq-status-badge">${escHtml(statusLabel)}</span></td>
+        <td class="rq-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </td>`;
+      tr.addEventListener('click',   () => openModal(item));
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openModal(item); });
+      return tr;
+    }
+
+    function renderTable(items) {
+      elTableBody.innerHTML = '';
+      const slice = items.slice(0, MAX_ROWS);
+      slice.forEach(item => elTableBody.appendChild(renderRow(item)));
+    }
+
+    function openModal(item) {
+      const priorityCls = NETRA.priorityClass(item.priority);
+      const confDisplay = item.confidence != null
+        ? (Number(item.confidence) > 1 ? Number(item.confidence).toFixed(1) + '%' : (Number(item.confidence) * 100).toFixed(1) + '%')
+        : '—';
+
+      document.getElementById('rq-modal-screening-id').textContent = item.screening_id || '—';
+      document.getElementById('rqd-screening-id').textContent      = item.screening_id || '—';
+      document.getElementById('rqd-created-at').textContent        = item.created_at ? new Date(item.created_at).toLocaleString('en-IN') : '—';
+      document.getElementById('rqd-prediction').textContent        = item.prediction || '—';
+      document.getElementById('rqd-severity').textContent          = item.severity || '—';
+      document.getElementById('rqd-confidence').textContent        = confDisplay;
+      document.getElementById('rqd-triage-decision').textContent   = item.triage_decision || '—';
+      document.getElementById('rqd-status').textContent            = NETRA.formatStatus(item.status);
+      document.getElementById('rqd-action').textContent            = NETRA.formatAction(item.action);
+      document.getElementById('rqd-reason').textContent            = item.reason || '—';
+
+      // Priority badge in modal
+      const priBadge = document.getElementById('rqd-priority');
+      priBadge.innerHTML = `<span class="priority-badge priority-${priorityCls}">${escHtml((item.priority || '—').toUpperCase())}</span>`;
+
+      // Heatmap button — show only if heatmap available from screening record
+      const localScreening = NETRA.getScreeningById ? NETRA.getScreeningById(item.screening_id) : null;
+      if (localScreening && localScreening.heatmapUrl) {
+        heatmapBtn.style.display = 'inline-flex';
+        heatmapBtn.onclick = () => window.open('reports.html?id=' + item.screening_id, '_blank');
+      } else {
+        heatmapBtn.style.display = 'none';
+      }
+
+      modalOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modalCloseFooter.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function loadReferralQueue() {
+      setState('loading');
+      refreshBtn.classList.add('loading');
+      try {
+        const items = await NETRA.getReferralQueue();
+        if (!items || items.length === 0) {
+          setState('empty');
+        } else {
+          updateCounters(items);
+          renderTable(items);
+          setState('data');
+        }
+      } catch (err) {
+        setState('error');
+        elErrorDetail.textContent = err.message || '';
+        console.error('[NETRA] Referral Queue error:', err);
+      } finally {
+        refreshBtn.classList.remove('loading');
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadReferralQueue);
+
+    // Auto-load on page ready
+    loadReferralQueue();
+  })();
+</script>
+
+
+<!-- ══ SCREENING DETAIL MODAL ══════════════════════════════════════ -->
+<div id="rq-modal-overlay" class="rq-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rq-modal-title">
+  <div class="rq-modal">
+    <div class="rq-modal-header">
+      <div>
+        <div class="rq-modal-title" id="rq-modal-title">Screening Details</div>
+        <div class="rq-modal-id" id="rq-modal-screening-id">—</div>
+      </div>
+      <button class="rq-modal-close" id="rq-modal-close-btn" aria-label="Close details">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="rq-modal-body">
+      <div class="rq-detail-grid">
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Screening ID</div>
+          <div class="rq-detail-value mono" id="rqd-screening-id">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Created At</div>
+          <div class="rq-detail-value" id="rqd-created-at">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Prediction</div>
+          <div class="rq-detail-value" id="rqd-prediction">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Severity</div>
+          <div class="rq-detail-value" id="rqd-severity">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Confidence</div>
+          <div class="rq-detail-value" id="rqd-confidence">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Priority</div>
+          <div class="rq-detail-value" id="rqd-priority">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Triage Decision</div>
+          <div class="rq-detail-value" id="rqd-triage-decision">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Status</div>
+          <div class="rq-detail-value" id="rqd-status">—</div>
+        </div>
+        <div class="rq-detail-item full-width">
+          <div class="rq-detail-label">Recommended Action</div>
+          <div class="rq-detail-value" id="rqd-action">—</div>
+        </div>
+        <div class="rq-detail-item full-width">
+          <div class="rq-detail-label">Reason / Clinical Notes</div>
+          <div class="rq-reason-box" id="rqd-reason">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="rq-modal-footer">
+      <button id="rq-modal-heatmap-btn" class="btn btn-outline btn-sm" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        View Explanation
+      </button>
+      <button id="rq-modal-close-footer-btn" class="btn btn-secondary btn-sm">Close</button>
+    </div>
+  </div>
+</div>
+<!-- ══ END MODAL ══════════════════════════════════════════════════ -->
+</body>
+</html>

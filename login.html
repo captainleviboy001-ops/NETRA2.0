@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — NETRA</title>
+  <meta name="description" content="Sign in to NETRA — Explainable AI for Diabetic Retinopathy Screening." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: var(--teal-900);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Dedicated backdrop layer for 100% reliable rendering on all protocols/browsers */
+    .login-backdrop {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .login-backdrop-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+    }
+
+    /* Balanced clinical teal overlay so photo details (equipment, room, window)
+       are clearly visible while maintaining rich brand color and card contrast */
+    .login-backdrop-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(9, 42, 54, 0.58) 0%,
+        rgba(13, 51, 64, 0.40) 50%,
+        rgba(8, 35, 48, 0.58) 100%
+      );
+    }
+
+    .login-outer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      width: 100%;
+      max-width: 900px;
+      min-height: 540px;
+      border-radius: var(--radius-xl);
+      /* Elevated shadow to emphasize the card floating above the photo */
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.55),
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255,255,255,.06);
+      overflow: hidden;
+      /* Subtle lift on hover — reinforces depth */
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .login-outer:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 40px 90px rgba(0, 0, 0, 0.6),
+        0 12px 32px rgba(0, 0, 0, 0.32),
+        0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    /* Left panel — brand.
+       Semi-transparent so the background photo bleeds through slightly,
+       giving a sense of depth behind the wordmark.
+    */
+    .login-brand {
+      flex: 1;
+      background: rgba(10, 38, 48, 0.88);
+      /* Frosted-glass quality: the photo is subtly visible */
+      backdrop-filter: blur(2px) saturate(0.8);
+      -webkit-backdrop-filter: blur(2px) saturate(0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 52px 48px;
+      position: relative;
+      overflow: hidden;
+      border-right: 1px solid rgba(255,255,255,.07);
+    }
+
+    .login-brand::before {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      border: 60px solid rgba(255,255,255,.04);
+      bottom: -100px;
+      right: -100px;
+      pointer-events: none;
+    }
+
+    .login-brand::after {
+      content: '';
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 40px solid rgba(255,255,255,.04);
+      top: -60px;
+      left: -60px;
+      pointer-events: none;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-icon {
+      width: 52px;
+      height: 52px;
+    }
+
+    .brand-logo-text .wordmark {
+      font-family: 'Lora', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: 0.06em;
+    }
+
+    .brand-logo-text .tagline {
+      font-size: 0.72rem;
+      color: var(--teal-400);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .brand-footer p {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,.45);
+      line-height: 1.6;
+      max-width: 240px;
+    }
+
+    /* Right panel — form */
+    .login-form-panel {
+      width: 380px;
+      background: var(--white);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 52px 44px;
+    }
+
+    .login-form-panel h1 {
+      font-size: 1.45rem;
+      margin-bottom: 6px;
+    }
+
+    .login-form-panel .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .login-error {
+      display: none;
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      font-size: 0.83rem;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
+
+    .login-error.visible { display: block; }
+
+    .btn-login {
+      width: 100%;
+      justify-content: center;
+      padding: 12px;
+      margin-top: 4px;
+    }
+
+    .login-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 28px;
+      text-align: center;
+      background: var(--neutral-50);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+
+    .login-hint strong { color: var(--text-secondary); }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      body {
+        /* On mobile, keep background but disable fixed attachment for perf */
+        background-attachment: scroll;
+        align-items: flex-start;
+      }
+
+      .login-outer {
+        flex-direction: column;
+        border-radius: 0;
+        min-height: 100vh;
+        box-shadow: none;
+        transform: none !important;
+      }
+
+      .login-brand {
+        flex: none;
+        padding: 36px 28px;
+        min-height: 200px;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(10, 38, 48, 0.92);
+      }
+
+      .login-brand::before, .login-brand::after { display: none; }
+
+      .brand-footer { display: none; }
+
+      .login-form-panel {
+        width: 100%;
+        padding: 36px 28px 48px;
+        /* On mobile the form panel needs a tiny bit of opacity support */
+        background: rgba(255,255,255,0.97);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Full-bleed clinical background image + calibrated teal overlay -->
+  <div class="login-backdrop" aria-hidden="true">
+    <img src="login-bg.jpg" alt="NETRA Retinal Screening Clinical Setting" class="login-backdrop-img" />
+    <div class="login-backdrop-overlay"></div>
+  </div>
+
+<div class="login-outer">
+
+  <!-- Left brand panel -->
+  <div class="login-brand">
+    <div class="brand-logo">
+      <!-- Eye icon SVG -->
+      <svg class="brand-logo-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="26" cy="26" r="26" fill="rgba(255,255,255,.06)"/>
+        <path d="M8 26C8 26 14 14 26 14C38 14 44 26 44 26C44 26 38 38 26 38C14 38 8 26 8 26Z"
+              stroke="rgba(255,255,255,.9)" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+        <circle cx="26" cy="26" r="7" stroke="rgba(255,255,255,.9)" stroke-width="2.2" fill="none"/>
+        <circle cx="26" cy="26" r="3" fill="rgba(255,255,255,.9)"/>
+        <circle cx="28.5" cy="23.5" r="1.2" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      <div class="brand-logo-text">
+        <div class="wordmark">NETRA</div>
+        <div class="tagline">Explainable Retinal AI</div>
+      </div>
+    </div>
+
+    <div class="brand-footer">
+      <p>AI-assisted diabetic retinopathy screening — designed for healthcare workers in the field.</p>
+    </div>
+  </div>
+
+  <!-- Right form panel -->
+  <div class="login-form-panel">
+    <h1>Welcome back</h1>
+    <p class="subtitle">Sign in to continue to NETRA</p>
+
+    <div id="login-error" class="login-error" role="alert">
+      Incorrect username or password. Please try again.
+    </div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="username">Username / Staff ID</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          class="form-input"
+          placeholder="e.g. dr.priya or 2024-STF-041"
+          autocomplete="username"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          class="form-input"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <button type="submit" id="login-btn" class="btn btn-primary btn-login">
+        Log in
+      </button>
+    </form>
+
+    <div class="login-hint">
+      <strong>Demo credentials</strong><br>
+      Username: <code>demo</code> &nbsp;·&nbsp; Password: <code>netra123</code>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('login-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-error');
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value;
+
+    errEl.classList.remove('visible');
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    setTimeout(() => {
+      // Accept "demo/netra123" or any non-empty combo for prototype
+      if ((u === 'demo' && p === 'netra123') || (u.length > 0 && p.length > 0)) {
+        const displayName = u === 'demo' ? 'Dr. Priya Nair' : u;
+        sessionStorage.setItem('netra_auth', JSON.stringify({
+          username: u,
+          name: displayName,
+          role: 'Ophthalmologist',
+          facility: 'District Primary Health Centre',
+        }));
+        window.location.href = 'screening.html';
+      } else {
+        errEl.classList.add('visible');
+        btn.disabled = false;
+        btn.textContent = 'Log in';
+      }
+    }, 900);
+  });
+</script>
+
+</body>
+</html>

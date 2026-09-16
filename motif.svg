@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="680" viewBox="0 0 680 680">
+  <!--
+    NETRA background motif — concentric circles echoing a fundus ophthalmoscopy scan.
+    Centered at the bottom-right corner (680, 680) so the rings bleed naturally off
+    that edge. Referenced at 6% opacity via CSS ::before pseudo-element.
+  -->
+  <g fill="none" stroke="#1a6478" stroke-width="1.8">
+    <circle cx="680" cy="680" r="55"/>
+    <circle cx="680" cy="680" r="110"/>
+    <circle cx="680" cy="680" r="165"/>
+    <circle cx="680" cy="680" r="220"/>
+    <circle cx="680" cy="680" r="275"/>
+    <circle cx="680" cy="680" r="330"/>
+    <circle cx="680" cy="680" r="385"/>
+    <circle cx="680" cy="680" r="440"/>
+    <circle cx="680" cy="680" r="495"/>
+    <circle cx="680" cy="680" r="550"/>
+    <circle cx="680" cy="680" r="605"/>
+    <circle cx="680" cy="680" r="660"/>
+  </g>
+</svg>

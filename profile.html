@@ -1,0 +1,511 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile — NETRA</title>
+  <meta name="description" content="View and update your NETRA account details and preferences." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── Profile card (left) ─────────────────────────────────── */
+    .profile-card {
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .profile-avatar-section {
+      background: var(--teal-900);
+      padding: 36px 24px 24px;
+      text-align: center;
+    }
+
+    .profile-avatar-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--teal-600);
+      border: 3px solid rgba(255,255,255,.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--white);
+      margin: 0 auto 14px;
+    }
+
+    .profile-display-name {
+      font-family: 'Lora', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .profile-display-role {
+      font-size: 0.78rem;
+      color: var(--teal-400);
+      letter-spacing: 0.04em;
+    }
+
+    .profile-card-body {
+      padding: 20px;
+    }
+
+    .profile-info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.85rem;
+    }
+
+    .profile-info-row:last-child { border-bottom: none; }
+
+    .profile-info-row svg {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .profile-info-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .profile-info-value {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .sign-out-btn {
+      width: 100%;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    /* ── Settings (right) ────────────────────────────────────── */
+    .settings-section {
+      background: var(--white);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+
+    .settings-section-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .settings-section-header h2 {
+      font-size: 1rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+    }
+
+    .settings-section-body {
+      padding: 24px;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .settings-row:last-child { border-bottom: none; }
+
+    .settings-row-label {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .settings-row-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+    }
+
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--neutral-300);
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: background var(--transition);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      top: 3px;
+      background: var(--white);
+      border-radius: 50%;
+      transition: transform var(--transition);
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+
+    .toggle input:checked + .toggle-slider { background: var(--teal-600); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .toggle input:focus-visible + .toggle-slider { outline: 2px solid var(--teal-400); outline-offset: 2px; }
+
+    .save-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 16px;
+    }
+
+    .save-feedback {
+      font-size: 0.82rem;
+      color: var(--grade-none);
+      display: none;
+    }
+
+    @media (max-width: 720px) {
+      .profile-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<div class="app-shell">
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,.06)"/>
+        <path d="M5 18C5 18 10 9 18 9C26 9 31 18 31 18C31 18 26 27 18 27C10 27 5 18 5 18Z" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+        <circle cx="18" cy="18" r="5" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none"/>
+        <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,.85)"/>
+        <circle cx="19.8" cy="16.2" r="0.9" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      <div class="logo-text">
+        <span class="wordmark">NETRA</span>
+        <span class="tagline">Explainable Retinal AI</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="nav-label">Screening</span>
+      <a href="screening.html" class="nav-item" data-page="screening">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="4"/></svg>
+        New Screening
+      </a>
+      <a href="history.html" class="nav-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        Screening History
+      </a>      <a href="referrals.html" class="nav-item" data-page="referrals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Referral Queue
+        <span class="rq-nav-dot" style="display:none;"></span>
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Records</span>
+      <a href="reports.html" class="nav-item" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Reports
+      </a>
+      <span class="nav-label" style="margin-top:8px;">Account</span>
+      <a href="profile.html" class="nav-item" data-page="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">DR</div>
+      <div class="user-meta">
+        <div class="user-name" id="sidebar-user-name">—</div>
+        <div class="user-role" id="sidebar-user-role">—</div>
+      </div>
+      <button id="logout-btn" title="Sign out" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);padding:4px;" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-header-left">
+          <h1>Profile</h1>
+          <p>Your account details and preferences</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="profile-layout">
+
+        <!-- Left: profile card -->
+        <div>
+          <div class="profile-card">
+            <div class="profile-avatar-section">
+              <div class="profile-avatar-large" id="profile-avatar-large">DR</div>
+              <div class="profile-display-name" id="profile-display-name">—</div>
+              <div class="profile-display-role" id="profile-display-role">—</div>
+            </div>
+            <div class="profile-card-body">
+              <div class="profile-info-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div>
+                  <div class="profile-info-label">Username</div>
+                  <div class="profile-info-value" id="profile-username">—</div>
+                </div>
+              </div>
+              <div class="profile-info-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <div>
+                  <div class="profile-info-label">Facility</div>
+                  <div class="profile-info-value" id="profile-facility">—</div>
+                </div>
+              </div>
+              <div class="profile-info-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <div>
+                  <div class="profile-info-label">Access level</div>
+                  <div class="profile-info-value">Clinician</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button id="sign-out-card-btn" class="btn btn-secondary sign-out-btn mt-4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign out
+          </button>
+        </div>
+
+        <!-- Right: settings -->
+        <div>
+
+          <!-- Account details -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <h2>Account Details</h2>
+              <button id="edit-btn" class="btn btn-secondary btn-sm">Edit</button>
+            </div>
+            <div class="settings-section-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="field-name">Full name</label>
+                  <input type="text" id="field-name" class="form-input" disabled />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="field-role">Role / Designation</label>
+                  <input type="text" id="field-role" class="form-input" disabled />
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0">
+                <label class="form-label" for="field-facility">Facility / Clinic</label>
+                <input type="text" id="field-facility" class="form-input" disabled />
+              </div>
+              <div class="save-bar" id="save-bar" style="display:none;">
+                <button id="save-details-btn" class="btn btn-primary btn-sm">Save changes</button>
+                <button id="cancel-edit-btn" class="btn btn-secondary btn-sm">Cancel</button>
+                <span id="save-feedback" class="save-feedback">✓ Saved</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Preferences -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <h2>Preferences</h2>
+            </div>
+            <div class="settings-section-body">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Show confidence score on results</div>
+                  <div class="settings-row-sub">Display the model's confidence percentage alongside each grade</div>
+                </div>
+                <label class="toggle" aria-label="Show confidence score toggle">
+                  <input type="checkbox" id="pref-confidence" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Always show Grad-CAM heatmap</div>
+                  <div class="settings-row-sub">Display the saliency overlay by default after analysis</div>
+                </div>
+                <label class="toggle" aria-label="Always show Grad-CAM toggle">
+                  <input type="checkbox" id="pref-heatmap" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Auto-save screenings to history</div>
+                  <div class="settings-row-sub">Automatically add completed screenings without a manual save step</div>
+                </div>
+                <label class="toggle" aria-label="Auto-save screenings toggle">
+                  <input type="checkbox" id="pref-autosave" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="settings-section">
+            <div class="settings-section-header">
+              <h2>About NETRA</h2>
+            </div>
+            <div class="settings-section-body">
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Version</div>
+                  <div class="settings-row-sub">Prototype build — September 2026</div>
+                </div>
+                <span style="font-size:0.8rem;color:var(--text-muted);">v0.9.0</span>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-row-label">Model</div>
+                  <div class="settings-row-sub">EfficientNet-B4 + Grad-CAM (prototype, not validated)</div>
+                </div>
+              </div>
+              <div class="settings-row" style="border:none">
+                <div>
+                  <div class="settings-row-label">Intended use</div>
+                  <div class="settings-row-sub">Screening assistance for qualified eye care professionals. Not a certified diagnostic device.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="netra-config.js"></script>
+<script src="netra.js"></script>
+<script>
+  NETRA.initSidebar('profile');
+
+  const user = NETRA.getUser();
+  if (user) {
+    const initials = user.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('profile-avatar-large').textContent = initials;
+    document.getElementById('profile-display-name').textContent = user.name;
+    document.getElementById('profile-display-role').textContent = user.role;
+    document.getElementById('profile-username').textContent = user.username;
+    document.getElementById('profile-facility').textContent = user.facility || '—';
+    document.getElementById('field-name').value     = user.name;
+    document.getElementById('field-role').value     = user.role;
+    document.getElementById('field-facility').value = user.facility || '';
+  }
+
+  // ── Edit/save account details ───────────────────────────────────
+  const editBtn    = document.getElementById('edit-btn');
+  const saveBar    = document.getElementById('save-bar');
+  const saveBtn    = document.getElementById('save-details-btn');
+  const cancelBtn  = document.getElementById('cancel-edit-btn');
+  const feedback   = document.getElementById('save-feedback');
+  const fields     = ['field-name','field-role','field-facility'].map(id => document.getElementById(id));
+
+  editBtn.addEventListener('click', () => {
+    fields.forEach(f => f.disabled = false);
+    saveBar.style.display = 'flex';
+    editBtn.style.display = 'none';
+    fields[0].focus();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    fields.forEach(f => { f.disabled = true; });
+    if (user) {
+      document.getElementById('field-name').value     = user.name;
+      document.getElementById('field-role').value     = user.role;
+      document.getElementById('field-facility').value = user.facility || '';
+    }
+    saveBar.style.display = 'none';
+    editBtn.style.display = '';
+  });
+
+  saveBtn.addEventListener('click', () => {
+    const updated = {
+      ...user,
+      name:     document.getElementById('field-name').value.trim() || user.name,
+      role:     document.getElementById('field-role').value.trim() || user.role,
+      facility: document.getElementById('field-facility').value.trim(),
+    };
+    sessionStorage.setItem('netra_auth', JSON.stringify(updated));
+
+    // Update sidebar & profile display
+    document.getElementById('sidebar-user-name').textContent   = updated.name;
+    document.getElementById('sidebar-user-role').textContent   = updated.role;
+    document.getElementById('profile-display-name').textContent = updated.name;
+    document.getElementById('profile-display-role').textContent = updated.role;
+    document.getElementById('profile-facility').textContent    = updated.facility || '—';
+    const initials = updated.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('profile-avatar-large').textContent = initials;
+    document.getElementById('sidebar-avatar').textContent       = initials;
+
+    fields.forEach(f => f.disabled = true);
+    feedback.style.display = 'inline';
+    setTimeout(() => { feedback.style.display = 'none'; }, 2500);
+    editBtn.style.display = '';
+    saveBar.style.display = 'none';
+  });
+
+  document.getElementById('sign-out-card-btn').addEventListener('click', NETRA.logout);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,523 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral Queue — NETRA</title>
+  <meta name="description" content="View all cases requiring follow-up, referral, or human review in the NETRA screening workflow." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .rq-page-table .rq-table th:nth-child(3),
+    .rq-page-table .rq-table td:nth-child(3) { display: table-cell !important; }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,.06)"/>
+        <path d="M5 18C5 18 10 9 18 9C26 9 31 18 31 18C31 18 26 27 18 27C10 27 5 18 5 18Z"
+              stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+        <circle cx="18" cy="18" r="5" stroke="rgba(255,255,255,.85)" stroke-width="1.8" fill="none"/>
+        <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,.85)"/>
+        <circle cx="19.8" cy="16.2" r="0.9" fill="rgba(255,255,255,.6)"/>
+      </svg>
+      <div class="logo-text">
+        <span class="wordmark">NETRA</span>
+        <span class="tagline">Explainable Retinal AI</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-label">Screening</span>
+      <a href="screening.html" class="nav-item" data-page="screening">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="4"/></svg>
+        New Screening
+      </a>
+      <a href="history.html" class="nav-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+        Screening History
+      </a>
+      <a href="referrals.html" class="nav-item" data-page="referrals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Referral Queue
+        <span class="rq-nav-dot" id="rq-nav-indicator" style="display:none;"></span>
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Records</span>
+      <a href="reports.html" class="nav-item" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Reports
+      </a>
+
+      <span class="nav-label" style="margin-top:8px;">Account</span>
+      <a href="profile.html" class="nav-item" data-page="profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">DR</div>
+      <div class="user-meta">
+        <div class="user-name" id="sidebar-user-name">—</div>
+        <div class="user-role" id="sidebar-user-role">—</div>
+      </div>
+      <button id="logout-btn" title="Sign out" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.4);padding:4px;" aria-label="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="page-header">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-header-left">
+          <h1>Referral Queue</h1>
+          <p>All cases requiring follow-up, referral, or human review</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="rq-refresh-btn" class="btn btn-secondary btn-sm" aria-label="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+        <a href="screening.html" class="btn btn-primary btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          New Screening
+        </a>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- Summary Counters -->
+      <div class="rq-card" style="margin-bottom:24px;">
+        <div class="rq-counters" id="rq-counters" style="display:none;">
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-total">—</div>
+            <div class="rq-counter-label">Total Cases</div>
+          </div>
+          <div class="rq-counter urgent">
+            <div class="rq-counter-value" id="rq-count-urgent">—</div>
+            <div class="rq-counter-label">Urgent</div>
+          </div>
+          <div class="rq-counter high">
+            <div class="rq-counter-value" id="rq-count-high">—</div>
+            <div class="rq-counter-label">High Priority</div>
+          </div>
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-followup">—</div>
+            <div class="rq-counter-label">Follow-Up</div>
+          </div>
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-review">—</div>
+            <div class="rq-counter-label">Human Review</div>
+          </div>
+          <div class="rq-counter">
+            <div class="rq-counter-value" id="rq-count-completed">—</div>
+            <div class="rq-counter-label">Completed</div>
+          </div>
+        </div>
+        <div id="rq-counters-loading" class="rq-state" style="padding:20px 24px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="rq-spinner" style="width:24px;height:24px;margin:0;border-width:2px;"></div>
+            <span class="text-sm text-muted">Loading summary…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="rq-filter-bar" id="rq-filter-bar" style="display:none;">
+        <input
+          id="rq-search"
+          type="search"
+          class="form-input rq-filter-search"
+          placeholder="Search by screening ID or prediction…"
+          aria-label="Search referral queue"
+        />
+        <select id="rq-filter-severity" class="form-input rq-filter-select" aria-label="Filter by severity">
+          <option value="">All Severities</option>
+          <option value="No DR">No DR</option>
+          <option value="Mild DR">Mild DR</option>
+          <option value="Moderate DR">Moderate DR</option>
+          <option value="Severe DR">Severe DR</option>
+          <option value="Proliferative DR">Proliferative DR</option>
+        </select>
+        <select id="rq-filter-priority" class="form-input rq-filter-select" aria-label="Filter by priority">
+          <option value="">All Priorities</option>
+          <option value="URGENT">Urgent</option>
+          <option value="HIGH">High</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="LOW">Low</option>
+          <option value="REVIEW">Review</option>
+        </select>
+        <select id="rq-filter-status" class="form-input rq-filter-select" aria-label="Filter by status">
+          <option value="">All Statuses</option>
+          <option value="PENDING_REFERRAL">Pending Referral</option>
+          <option value="PENDING_FOLLOW_UP">Pending Follow-up</option>
+          <option value="PENDING_HUMAN_REVIEW">Human Review Required</option>
+          <option value="COMPLETED">Completed</option>
+        </select>
+        <select id="rq-sort-date" class="form-input rq-filter-select" aria-label="Sort by date">
+          <option value="desc">Newest First</option>
+          <option value="asc">Oldest First</option>
+        </select>
+        <span class="rq-result-count" id="rq-result-count"></span>
+      </div>
+
+      <!-- Full Table Card -->
+      <div class="rq-card rq-page-table">
+
+        <!-- Loading -->
+        <div id="rq-loading" class="rq-state">
+          <div class="rq-spinner"></div>
+          <div class="rq-state-title">Loading referral queue…</div>
+          <div class="rq-state-sub">Fetching cases from the screening workflow</div>
+        </div>
+
+        <!-- Empty -->
+        <div id="rq-empty" class="rq-state" style="display:none;">
+          <svg class="rq-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div class="rq-state-title">No cases currently require referral or review.</div>
+          <div class="rq-state-sub">All screened cases are up to date.</div>
+        </div>
+
+        <!-- No results (filtered) -->
+        <div id="rq-no-results" class="rq-state" style="display:none;">
+          <svg class="rq-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <div class="rq-state-title">No results match your filters.</div>
+          <div class="rq-state-sub">Try clearing or adjusting your search.</div>
+        </div>
+
+        <!-- Error -->
+        <div id="rq-error" class="rq-state" style="display:none;">
+          <svg class="rq-state-icon rq-error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div class="rq-state-title">Referral queue unavailable. Please try again.</div>
+          <div class="rq-state-sub" id="rq-error-detail"></div>
+        </div>
+
+        <!-- Table -->
+        <div id="rq-table-wrap" class="rq-table-wrap" style="display:none;">
+          <table class="rq-table" role="grid" aria-label="Full referral queue">
+            <thead>
+              <tr>
+                <th scope="col">Screening ID</th>
+                <th scope="col">Created At</th>
+                <th scope="col">Prediction</th>
+                <th scope="col">Severity</th>
+                <th scope="col">Confidence</th>
+                <th scope="col">Priority</th>
+                <th scope="col">Action</th>
+                <th scope="col">Status</th>
+                <th scope="col" aria-label="View"></th>
+              </tr>
+            </thead>
+            <tbody id="rq-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Screening Detail Modal -->
+<div id="rq-modal-overlay" class="rq-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rq-modal-title">
+  <div class="rq-modal">
+    <div class="rq-modal-header">
+      <div>
+        <div class="rq-modal-title" id="rq-modal-title">Screening Details</div>
+        <div class="rq-modal-id" id="rq-modal-screening-id">—</div>
+      </div>
+      <button class="rq-modal-close" id="rq-modal-close-btn" aria-label="Close details">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="rq-modal-body">
+      <div class="rq-detail-grid">
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Screening ID</div>
+          <div class="rq-detail-value mono" id="rqd-screening-id">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Created At</div>
+          <div class="rq-detail-value" id="rqd-created-at">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Prediction</div>
+          <div class="rq-detail-value" id="rqd-prediction">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Severity</div>
+          <div class="rq-detail-value" id="rqd-severity">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Confidence</div>
+          <div class="rq-detail-value" id="rqd-confidence">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Priority</div>
+          <div class="rq-detail-value" id="rqd-priority">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Triage Decision</div>
+          <div class="rq-detail-value" id="rqd-triage-decision">—</div>
+        </div>
+        <div class="rq-detail-item">
+          <div class="rq-detail-label">Status</div>
+          <div class="rq-detail-value" id="rqd-status">—</div>
+        </div>
+        <div class="rq-detail-item full-width">
+          <div class="rq-detail-label">Recommended Action</div>
+          <div class="rq-detail-value" id="rqd-action">—</div>
+        </div>
+        <div class="rq-detail-item full-width">
+          <div class="rq-detail-label">Reason / Clinical Notes</div>
+          <div class="rq-reason-box" id="rqd-reason">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="rq-modal-footer">
+      <button id="rq-modal-heatmap-btn" class="btn btn-outline btn-sm" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        View Explanation
+      </button>
+      <button id="rq-modal-close-footer-btn" class="btn btn-secondary btn-sm">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="netra-config.js"></script>
+<script src="netra.js"></script>
+<script>
+  NETRA.initSidebar('referrals');
+
+  (function () {
+    let allItems = [];
+
+    const elLoading      = document.getElementById('rq-loading');
+    const elEmpty        = document.getElementById('rq-empty');
+    const elError        = document.getElementById('rq-error');
+    const elNoResults    = document.getElementById('rq-no-results');
+    const elErrorDetail  = document.getElementById('rq-error-detail');
+    const elTableWrap    = document.getElementById('rq-table-wrap');
+    const elTableBody    = document.getElementById('rq-table-body');
+    const elCounters     = document.getElementById('rq-counters');
+    const elCountLoading = document.getElementById('rq-counters-loading');
+    const elFilterBar    = document.getElementById('rq-filter-bar');
+    const elResultCount  = document.getElementById('rq-result-count');
+    const elNavDot       = document.getElementById('rq-nav-indicator');
+    const refreshBtn     = document.getElementById('rq-refresh-btn');
+    const modalOverlay   = document.getElementById('rq-modal-overlay');
+    const modalClose     = document.getElementById('rq-modal-close-btn');
+    const modalCloseFooter = document.getElementById('rq-modal-close-footer-btn');
+    const heatmapBtn     = document.getElementById('rq-modal-heatmap-btn');
+
+    const searchEl       = document.getElementById('rq-search');
+    const filterSeverity = document.getElementById('rq-filter-severity');
+    const filterPriority = document.getElementById('rq-filter-priority');
+    const filterStatus   = document.getElementById('rq-filter-status');
+    const sortDate       = document.getElementById('rq-sort-date');
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function setTableState(state) {
+      elLoading.style.display    = state === 'loading'    ? 'block' : 'none';
+      elEmpty.style.display      = state === 'empty'      ? 'block' : 'none';
+      elError.style.display      = state === 'error'      ? 'block' : 'none';
+      elNoResults.style.display  = state === 'noresults'  ? 'block' : 'none';
+      elTableWrap.style.display  = state === 'data'       ? 'block' : 'none';
+    }
+
+    function updateCounters(items) {
+      const total     = items.length;
+      const urgent    = items.filter(i => (i.priority||'').toUpperCase() === 'URGENT').length;
+      const high      = items.filter(i => (i.priority||'').toUpperCase() === 'HIGH').length;
+      const followup  = items.filter(i => (i.status||'').toUpperCase().includes('FOLLOW')).length;
+      const review    = items.filter(i => (i.status||'').toUpperCase().includes('HUMAN') || (i.status||'').toUpperCase().includes('REVIEW') || (i.action||'').toUpperCase().includes('MANUAL')).length;
+      const completed = items.filter(i => (i.status||'').toUpperCase() === 'COMPLETED').length;
+
+      document.getElementById('rq-count-total').textContent     = total;
+      document.getElementById('rq-count-urgent').textContent    = urgent;
+      document.getElementById('rq-count-high').textContent      = high;
+      document.getElementById('rq-count-followup').textContent  = followup;
+      document.getElementById('rq-count-review').textContent    = review;
+      document.getElementById('rq-count-completed').textContent = completed;
+
+      elCountLoading.style.display = 'none';
+      elCounters.style.display     = 'flex';
+
+      if (total > 0 && elNavDot) elNavDot.style.display = 'inline-block';
+    }
+
+    function applyFilters() {
+      const query    = (searchEl.value || '').toLowerCase().trim();
+      const severity = filterSeverity.value.toLowerCase();
+      const priority = filterPriority.value.toUpperCase();
+      const status   = filterStatus.value.toUpperCase();
+      const sort     = sortDate.value;
+
+      let filtered = allItems.filter(item => {
+        if (query) {
+          const sid  = (item.screening_id || '').toLowerCase();
+          const pred = (item.prediction || '').toLowerCase();
+          if (!sid.includes(query) && !pred.includes(query)) return false;
+        }
+        if (severity && !(item.severity || item.prediction || '').toLowerCase().includes(severity)) return false;
+        if (priority && (item.priority || '').toUpperCase() !== priority) return false;
+        if (status   && (item.status   || '').toUpperCase() !== status)   return false;
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        const da = new Date(a.created_at || 0);
+        const db = new Date(b.created_at || 0);
+        return sort === 'asc' ? da - db : db - da;
+      });
+
+      elResultCount.textContent = filtered.length + ' of ' + allItems.length + ' case' + (allItems.length !== 1 ? 's' : '');
+
+      if (filtered.length === 0 && allItems.length > 0) {
+        setTableState('noresults');
+      } else if (filtered.length === 0) {
+        setTableState('empty');
+      } else {
+        renderFullTable(filtered);
+        setTableState('data');
+      }
+    }
+
+    function renderFullTable(items) {
+      elTableBody.innerHTML = '';
+      items.forEach(item => elTableBody.appendChild(renderRow(item)));
+    }
+
+    function renderRow(item) {
+      const priorityCls = NETRA.priorityClass(item.priority);
+      const actionLabel = NETRA.formatAction(item.action);
+      const statusLabel = NETRA.formatStatus(item.status);
+      const confDisplay = item.confidence != null
+        ? (Number(item.confidence) > 1 ? Number(item.confidence).toFixed(1) + '%' : (Number(item.confidence) * 100).toFixed(1) + '%')
+        : '—';
+      const dateDisplay = item.created_at
+        ? new Date(item.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '—';
+
+      const tr = document.createElement('tr');
+      tr.setAttribute('tabindex', '0');
+      tr.setAttribute('role', 'row');
+      tr.innerHTML = `
+        <td class="rq-screening-id">${escHtml(item.screening_id || '—')}</td>
+        <td style="font-size:.82rem;color:var(--text-muted);">${escHtml(dateDisplay)}</td>
+        <td class="rq-severity">${escHtml(item.prediction || '—')}</td>
+        <td class="rq-severity">${escHtml(item.severity || '—')}</td>
+        <td class="rq-confidence">${confDisplay}</td>
+        <td><span class="priority-badge priority-${priorityCls}">${escHtml((item.priority || '—').toUpperCase())}</span></td>
+        <td class="rq-action-text">${escHtml(actionLabel)}</td>
+        <td><span class="rq-status-badge">${escHtml(statusLabel)}</span></td>
+        <td class="rq-chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </td>`;
+      tr.addEventListener('click',   () => openModal(item));
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') openModal(item); });
+      return tr;
+    }
+
+    function openModal(item) {
+      const priorityCls = NETRA.priorityClass(item.priority);
+      const confDisplay = item.confidence != null
+        ? (Number(item.confidence) > 1 ? Number(item.confidence).toFixed(1) + '%' : (Number(item.confidence) * 100).toFixed(1) + '%')
+        : '—';
+
+      document.getElementById('rq-modal-screening-id').textContent = item.screening_id || '—';
+      document.getElementById('rqd-screening-id').textContent      = item.screening_id || '—';
+      document.getElementById('rqd-created-at').textContent        = item.created_at ? new Date(item.created_at).toLocaleString('en-IN') : '—';
+      document.getElementById('rqd-prediction').textContent        = item.prediction || '—';
+      document.getElementById('rqd-severity').textContent          = item.severity || '—';
+      document.getElementById('rqd-confidence').textContent        = confDisplay;
+      document.getElementById('rqd-triage-decision').textContent   = item.triage_decision || '—';
+      document.getElementById('rqd-status').textContent            = NETRA.formatStatus(item.status);
+      document.getElementById('rqd-action').textContent            = NETRA.formatAction(item.action);
+      document.getElementById('rqd-reason').textContent            = item.reason || '—';
+
+      const priBadge = document.getElementById('rqd-priority');
+      priBadge.innerHTML = `<span class="priority-badge priority-${priorityCls}">${escHtml((item.priority || '—').toUpperCase())}</span>`;
+
+      const localScreening = NETRA.getScreeningById ? NETRA.getScreeningById(item.screening_id) : null;
+      if (localScreening && localScreening.heatmapUrl) {
+        heatmapBtn.style.display = 'inline-flex';
+        heatmapBtn.onclick = () => window.open('reports.html?id=' + item.screening_id, '_blank');
+      } else {
+        heatmapBtn.style.display = 'none';
+      }
+
+      modalOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modalCloseFooter.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    // Filter events
+    [searchEl, filterSeverity, filterPriority, filterStatus, sortDate].forEach(el => {
+      if (el) el.addEventListener('input', applyFilters);
+    });
+
+    async function loadReferralQueue() {
+      setTableState('loading');
+      elCountLoading.style.display = 'block';
+      elCounters.style.display = 'none';
+      elFilterBar.style.display = 'none';
+      refreshBtn.classList.add('loading');
+
+      try {
+        const items = await NETRA.getReferralQueue();
+        allItems = items || [];
+
+        if (allItems.length === 0) {
+          setTableState('empty');
+          elCountLoading.style.display = 'none';
+        } else {
+          updateCounters(allItems);
+          elFilterBar.style.display = 'flex';
+          applyFilters();
+        }
+      } catch (err) {
+        setTableState('error');
+        elErrorDetail.textContent = err.message || '';
+        elCountLoading.style.display = 'none';
+        console.error('[NETRA] Referral Queue error:', err);
+      } finally {
+        refreshBtn.classList.remove('loading');
+      }
+    }
+
+    refreshBtn.addEventListener('click', loadReferralQueue);
+    loadReferralQueue();
+  })();
+</script>
+
+</body>
+</html>
