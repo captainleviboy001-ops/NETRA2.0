@@ -6,7 +6,5 @@ window.NETRA_CONFIG = {
   screenUrl: 'https://adhihackathon.app.n8n.cloud/webhook/diabetic-retinopathy/screen',
 
   // Referral queue endpoint (GET)
-  // Set to your n8n Referral Queue webhook URL, e.g.:
-  //   referralQueueUrl: 'https://adhihackathon.app.n8n.cloud/webhook/diabetic-retinopathy/referral-queue'
-  referralQueueUrl: '',
+  referralQueueUrl: 'https://adhihackathon.app.n8n.cloud/webhook/diabetic-retinopathy/referral-queue',
 };

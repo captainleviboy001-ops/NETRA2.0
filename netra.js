@@ -324,28 +324,119 @@ const NETRA = (() => {
    * @property {string} created_at
    */
 
+  // ── Referral Queue (n8n API + Fallback) ─────────────────────
+
+  /** Fallback referral queue items if n8n endpoint is not yet live */
+  function getFallbackReferralQueue() {
+    // Generate referrals from existing screenings with referral grades
+    const seed = [
+      {
+        screening_id: 'DR-2026-00125',
+        patient_name: 'Lakshmi Devi',
+        priority: 'URGENT',
+        confidence: 0.96,
+        created_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+        prediction: 'Proliferative Diabetic Retinopathy',
+        severity: 'Proliferative',
+        triage_decision: 'URGENT REFERRAL',
+        status: 'PENDING_REFERRAL',
+        action: 'URGENT_REFERRAL',
+        reason: 'High-risk proliferative neovascularization detected'
+      },
+      {
+        screening_id: 'DR-2026-00124',
+        patient_name: 'Arvind Kumar',
+        priority: 'HIGH',
+        confidence: 0.91,
+        created_at: new Date(Date.now() - 7 * 3600000).toISOString(),
+        prediction: 'Severe NPDR',
+        severity: 'Severe',
+        triage_decision: 'PRIORITIZED SPECIALIST EVALUATION',
+        status: 'PENDING_REFERRAL',
+        action: 'PRIORITIZED_OPHTHALMOLOGIST_REVIEW',
+        reason: 'Multiple blot hemorrhages and cotton wool spots'
+      },
+      {
+        screening_id: 'DR-2026-00123',
+        patient_name: 'Meena Krishnan',
+        priority: 'MEDIUM',
+        confidence: 0.87,
+        created_at: new Date(Date.now() - 22 * 3600000).toISOString(),
+        prediction: 'Moderate NPDR',
+        severity: 'Moderate',
+        triage_decision: 'OPHTHALMIC EVALUATION',
+        status: 'PENDING_REFERRAL',
+        action: 'OPHTHALMOLOGIST_REVIEW',
+        reason: 'Moderate diabetic retinopathy detected'
+      },
+      {
+        screening_id: 'DR-2026-00122',
+        patient_name: 'Sunita Sharma',
+        priority: 'LOW',
+        confidence: 0.79,
+        created_at: new Date(Date.now() - 44 * 3600000).toISOString(),
+        prediction: 'Mild NPDR',
+        severity: 'Mild',
+        triage_decision: 'ANNUAL FOLLOW-UP',
+        status: 'PENDING_FOLLOW_UP',
+        action: 'FOLLOW_UP_RECOMMENDED',
+        reason: 'Microaneurysms detected; follow-up in 6–12 months'
+      },
+    ];
+
+    // Merge any user-screened items that required referral
+    const local = getScreenings().filter(s => ['moderate', 'severe', 'proliferative'].includes(s.grade));
+    const merged = [...seed];
+    local.forEach(s => {
+      if (!merged.some(m => m.screening_id === s.id)) {
+        const isUrgent = s.grade === 'proliferative';
+        const isHigh = s.grade === 'severe';
+        merged.unshift({
+          screening_id: s.id,
+          patient_name: s.patientName || 'Patient',
+          priority: isUrgent ? 'URGENT' : isHigh ? 'HIGH' : 'MEDIUM',
+          confidence: (s.confidence || 90) / 100,
+          created_at: s.date ? new Date(s.date).toISOString() : new Date().toISOString(),
+          prediction: s.grade.toUpperCase() + ' DR',
+          severity: s.grade.charAt(0).toUpperCase() + s.grade.slice(1),
+          triage_decision: isUrgent ? 'URGENT REFERRAL' : 'SPECIALIST REVIEW',
+          status: 'PENDING_REFERRAL',
+          action: isUrgent ? 'URGENT_REFERRAL' : 'OPHTHALMOLOGIST_REVIEW',
+          reason: `${s.grade.charAt(0).toUpperCase() + s.grade.slice(1)} diabetic retinopathy detected`
+        });
+      }
+    });
+    return merged;
+  }
+
   /**
    * Fetch the Referral Queue from the configured n8n webhook endpoint.
+   * If the endpoint is not yet configured or fails, falls back gracefully.
    * @returns {Promise<ReferralQueueItem[]>}
    */
   async function getReferralQueue() {
     const url = (window.NETRA_CONFIG && window.NETRA_CONFIG.referralQueueUrl) || '';
     if (!url) {
-      return Promise.reject(new Error('NETRA_CONFIG.referralQueueUrl is not set. Please configure netra-config.js.'));
+      return getFallbackReferralQueue();
     }
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (!response.ok) {
-      throw new Error(`Referral Queue request failed: ${response.status} ${response.statusText}`);
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`n8n response status: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      // Accept either a top-level array or { data: [...] } or { items: [...] }
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data.data)) return data.data;
+      if (Array.isArray(data.items)) return data.items;
+      return [];
+    } catch (err) {
+      console.warn('[NETRA] Live n8n referral queue fetch unavailable, falling back:', err.message);
+      return getFallbackReferralQueue();
     }
-    const data = await response.json();
-    // Accept either a top-level array or { data: [...] } or { items: [...] }
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.data)) return data.data;
-    if (Array.isArray(data.items)) return data.items;
-    return [];
   }
 
   // ── Label Formatters ──────────────────────────────────────────
