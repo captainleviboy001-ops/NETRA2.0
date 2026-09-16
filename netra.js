@@ -244,6 +244,9 @@ const NETRA = (() => {
     }
 
     const rawData = await response.json();
+    if (rawData && (rawData.success === false || (rawData.error && !rawData.prediction && !rawData.severity))) {
+      throw new Error(rawData.message || rawData.reason || rawData.error || 'Analysis failed from n8n');
+    }
     const data    = normalizeN8nResponse(rawData);
 
     // class_id (0–4) → NETRA grade key
